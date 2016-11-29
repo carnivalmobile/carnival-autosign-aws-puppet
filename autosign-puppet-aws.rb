@@ -8,7 +8,10 @@ require 'puppet'
 require 'puppet/ssl/oids'
 require 'puppet/ssl/certificate_request'
 require 'aws-sdk'
+require 'syslog/logger'
 
+
+log = Syslog::Logger.new 'autosign'
 
 # Puppet CA executes this script with the client cert name (usually the
 # hostname) as an arguent and the full contents of the CSR as STDIN. Thanks to
@@ -16,7 +19,7 @@ require 'aws-sdk'
 # own libraries to crunch the CSR and extract out any values that have been
 # defined.
 
-puts "[autosign] Processing supplied CSR (from STDIN)..."
+log.info "[autosign] Processing supplied CSR (from STDIN)..."
 
 clientcert = ARGV.pop
 csr = Puppet::SSL::CertificateRequest.from_s(STDIN.read)
@@ -31,21 +34,21 @@ Puppet::SSL::Oids::PUPPET_OIDS.each do |puppetoid|
   end
 end
 
-puts "[autosign] Extended values returned: " + csr_extensions.to_s
+log.info "[autosign] Extended values returned: " + csr_extensions.to_s
 
 unless defined? csr_extensions['pp_instance_id']
-  puts "[autosign] Failing CSR sign due to no `pp_instance_id` data supplied."
+  log.info "[autosign] Failing CSR sign due to no `pp_instance_id` data supplied."
   exit 1
 end
 
 unless defined? csr_extensions['pp_region']
-  puts "[autosign] Failing CSR sign due to no `pp_region` data supplied."
+  log.info "[autosign] Failing CSR sign due to no `pp_region` data supplied."
   exit 1
 end
 
 
 # Fetch the instance details from AWS.
-puts "[autosign] Fetching instance infomation for #{csr_extensions['pp_instance_id']} from region #{csr_extensions['pp_region']}..."
+log.info "[autosign] Fetching instance infomation for #{csr_extensions['pp_instance_id']} from region #{csr_extensions['pp_region']}..."
 
 Aws.config.update({
   region: csr_extensions['pp_region'],
@@ -58,7 +61,7 @@ instance_details = client_ec2.describe_instances({
 })
 
 if instance_details.reservations.empty?
-  puts "[autosign] Failing signing as instance does not exist."
+  log.info "[autosign] Failing signing as instance does not exist."
   exit 1
 end
 
@@ -66,7 +69,7 @@ end
 # Ensure that we are trying to sign a running instance. Not much use signing
 # anything that has already been terminated...
 unless instance_details.reservations[0].instances[0].state.name == 'running'
-  puts "[autosign] Failing signing as instance not running (current state: #{instance_details.reservations[0].instances[0].state.name})"
+  log.info "[autosign] Failing signing as instance not running (current state: #{instance_details.reservations[0].instances[0].state.name})"
   exit 1
 end
 
@@ -76,7 +79,7 @@ end
 # tags, they are restricted to a tight time window when new servers are
 # provisioned.
 if (Time.now.utc - instance_details.reservations[0].instances[0].launch_time) > 1800
-  puts "[autosign] Failing signing as instance was launched more than 30mins ago, refusing to sign cert."
+  log.info "[autosign] Failing signing as instance was launched more than 30mins ago, refusing to sign cert."
   exit 1
 end
 
@@ -93,14 +96,14 @@ instance_details.reservations[0].instances[0].tags.each do |tag|
     if instance_name_cert == instance_name_tag
       validated = true
     else
-      puts "[autosign] Failing signing as certname #{instance_name_cert} does not match name tag with value of #{tag["value"]}."
+      log.info "[autosign] Failing signing as certname #{instance_name_cert} does not match name tag with value of #{tag["value"]}."
       exit 1
     end
   end
 end
 
 if validated == false
-  puts "[autosign] Failed signing as tag Name does not exist."
+  log.info "[autosign] Failed signing as tag Name does not exist."
   exit 1
 end
 
@@ -117,18 +120,18 @@ end
      validated = false
      instance_details.reservations[0].instances[0].tags.each do |tag|
        if tag["key"].downcase == extension
-         puts "[autosign] Validating tag #{extension} (expected value: #{value})"
+         log.info "[autosign] Validating tag #{extension} (expected value: #{value})"
          if tag["value"].downcase == value
            validated = true
          else
-           puts "[autosign] Failing signing as tag #{extension} value is #{tag["value"]} rather than expected #{value}"
+           log.info "[autosign] Failing signing as tag #{extension} value is #{tag["value"]} rather than expected #{value}"
            exit 1
          end
        end
      end
 
      if validated == false
-       puts "[autosign] Failed signing as tag #{extension} does not exist."
+       log.info "[autosign] Failed signing as tag #{extension} does not exist."
        exit 1
      end
    end
@@ -136,5 +139,5 @@ end
 
 
 # We passed the gauntlet! Approve certificate for signing.
-puts "[autosign] All validations passed, certificate #{clientcert} approved."
+log.info "[autosign] All validations passed, certificate #{clientcert} approved."
 exit 0
