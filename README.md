@@ -42,7 +42,8 @@ The autosigner validates the legitimacy of a request by checking:
 
 * The instance ID exists, AND
 
-* We have not signed this instance ID before (tracked on Puppet master), AND
+* We have not signed this instance ID before (tracked on Puppet master, assumes
+  shared disk), AND
 
 * The instance `Name` tag matches the requested cert name, AND
 
