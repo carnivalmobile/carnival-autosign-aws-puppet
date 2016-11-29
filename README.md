@@ -44,8 +44,6 @@ The autosigner validates the legitimacy of a request by checking:
 
 * The instance `Name` tag matches the requested cert name, AND
 
-* There is only one `Name` tag with the server name, AND
-
 * Administrator-selected trusted facts baked into the cert match tags on the
   instance. Eg you may wish to match `environment` or `role` or some other
   attribute used to categorize the servers, AND
@@ -188,6 +186,7 @@ details around any failures
 
 You can test the script directly with the following command:
 
+    export LOGSTDOUT=true
     cat testcsr.pem | ruby autosign-puppet-aws.rb staging-teststack-a4a8ab5c
 
 
