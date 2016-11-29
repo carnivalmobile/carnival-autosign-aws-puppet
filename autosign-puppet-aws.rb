@@ -78,11 +78,16 @@ end
 if ENV['STATETRACKING']
   statedir = ENV['STATETRACKING']
 else
-  statedir = '/etc/puppetlabs/ssl/autosign_tracking'
+  statedir = '/etc/puppetlabs/puppet/ssl/autosign_tracking'
 end
 
-unless Dir.exists? statedir
-  FileUtils.mkdir_p(statedir)
+begin
+  unless Dir.exists? statedir
+    FileUtils.mkdir_p(statedir)
+  end
+rescue Errno::EACCES
+  log.fatal "Unable to create/check directory #{statedir}"
+  exit 1
 end
 
 statefile = statedir + "/" + csr_extensions['pp_instance_id']
