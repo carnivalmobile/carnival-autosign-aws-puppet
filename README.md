@@ -3,9 +3,8 @@
 ## Overview
 
 This is a Puppet policy-based autosigner which allows Puppet signing requests to
-to validated against the instance data and tags provided via the AWS API to
+validate against the instance data and tags provided via the AWS API to
 ensure legitimacy.
-
 
 ## Background
 
@@ -25,7 +24,7 @@ to more appealing targets.
 So we can't simply permit any system on the network to request configuration.
 One common attempt to resolve this is the use of pre-shared certs/keys to
 validate the identity of a server at launch. The problem with this approach is
-that it's implementers rarely create a pre-shared cert/key per unique role, so
+that its implementers rarely create a pre-shared cert/key per unique role, so
 any attacker with access to the general site-wide pre-shared cert/key can
 provision any other server. And given that these pre-shared certs/keys are
 typically stored or linked to from user data, capturing them is a trivial
@@ -34,7 +33,6 @@ exercise.
 This policy-based autosigner solves this problem by instead evaluating every
 signing request the Puppet master/CA receives, against the data provided by the
 AWS APIs for each instance.
-
 
 ## Verifying Legitimacy
 
