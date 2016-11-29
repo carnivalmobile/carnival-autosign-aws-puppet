@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/opt/puppetlabs/puppet/bin/ruby
 #
 # Utility to validate Puppet CA/CSR requests against the instance data and tags
 # via the AWS API to ensure legitimacy. Refer to README.md for more information.
