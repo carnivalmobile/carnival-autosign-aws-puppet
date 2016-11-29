@@ -87,29 +87,66 @@ a suggested example:
     extension_requests:
         # These will vary to meet the requirements of your specific site. Refer to
         # https://docs.puppet.com/puppet/4.8/reference/ssl_attributes_extensions.html#puppet-specific-registered-ids
-        # for a list of all pre-defined IDs you can take advantage of.
+        # for a list of all pre-defined IDs you can take advantage of
+
+        # Required for autosigner:
         pp_instance_id: $(facter -p ec2_metadata.instance-id)
-        pp_role: $(facter -p role)
+        pp_region: $(facter -p ec2_metadata.placement.availability-zone | sed 's/[a-z]$//')
+
+        # Adjust to meet your requirements:
         pp_environment: $(facter -p environment)
+        pp_role: $(facter -p role)
     EOF
 
 After signing, these values will be available inside Puppet in the form of the
 `$trusted['extensions']['NAME']`, eg the above would provide:
 
     $trusted['extensions']['pp_instance_id']
+    $trusted['extensions']['pp_region']
     $trusted['extensions']['pp_role']
     $trusted['extensions']['pp_environment']
 
 
 ## On Puppet Master (server-side)
 
+The autosigner application itself does not require any specific configuration.
+However the server itself must have a proper IAM role and Puppet needs to be
+configured to use the autosigner.
+
+The following IAM role permits the Puppet master to read EC2 instance details of
+all instances in the account (however not manipulate them).
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": [
+            "ec2:DescribeInstances"
+          ],
+          "Resource": "*",
+          "Effect": "Allow"
+        }
+      ]
+    }
+
+Note this IAM policy can be locked down pre-account & per-region, however the
+`ec2:DescribeInstances` action does not support conditionals such as VPC or tag
+specific restrictions.
+
+The Puppet master configuration is simple - we just need to set autosign to
+point to the executable on disk.
+
+    [master]
+      autosign = /usr/local/bin/autosign-puppet-aws
 
 
 # Deployment
 
-To install the executable:
+Note that we use the Puppet labs bundled version of Ruby as it includes the gem
+for Puppet and a consistent version of Ruby across our server fleet. If your
+version of Puppet is installed elsewhere, you may need to amend.
 
-    gem install
+    /opt/puppetlabs/puppet/bin/gem aws-sdk puppet
     cp autosign-puppet-aws.rb /usr/local/bin/autosign-puppet-aws
 
 
@@ -133,7 +170,7 @@ You can check if the CSR includes the attributes with:
 
 You can test the script directly with the following command:
 
-    cat testcsr.pem | ./autosign-puppet-aws.rb staging-teststack-a4a8ab5c
+    cat testcsr.pem | ruby autosign-puppet-aws.rb staging-teststack-a4a8ab5c
 
 
 # Further Reading
