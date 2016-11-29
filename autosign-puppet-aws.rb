@@ -23,10 +23,17 @@ require 'puppet'
 require 'puppet/ssl/oids'
 require 'puppet/ssl/certificate_request'
 require 'aws-sdk'
+require 'logger'
 require 'syslog/logger'
 
-
-log = Syslog::Logger.new 'autosign'
+# When running under Puppet we can't get STDOUT/STDERR unless running Puppet in
+# debug mode. So we should default to using syslog, unless an engineer running
+# tests chooses not to.
+if ENV['LOGSTDOUT'] == 'true'
+  log = Logger.new(STDOUT)
+else
+  log = Syslog::Logger.new 'autosign'
+end
 
 # Puppet CA executes this script with the client cert name (usually the
 # hostname) as an arguent and the full contents of the CSR as STDIN. Thanks to
