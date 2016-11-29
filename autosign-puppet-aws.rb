@@ -25,6 +25,7 @@ require 'puppet/ssl/certificate_request'
 require 'aws-sdk'
 require 'logger'
 require 'syslog/logger'
+require 'fileutils'
 
 # When running under Puppet we can't get STDOUT/STDERR unless running Puppet in
 # debug mode. So we should default to using syslog, unless an engineer running
@@ -66,6 +67,32 @@ end
 unless defined? csr_extensions['pp_region']
   log.fatal "Failing CSR sign due to no `pp_region` data supplied."
   exit 1
+end
+
+
+# Check if we have already signed this instance ID or not. We do this by
+# tracking instance IDs locally. The one value we have to trust from the client
+# is the instance ID, so we need to make sure it can only ever be used exactly
+# once. After that, our security/trust is dependent on the security of the
+# tagging of the EC2 instances.
+if ENV['STATETRACKING']
+  statedir = ENV['STATETRACKING']
+else
+  statedir = '/etc/puppetlabs/ssl/autosign_tracking'
+end
+
+unless Dir.exists? statedir
+  FileUtils.mkdir_p(statedir)
+end
+
+statefile = statedir + "/" + csr_extensions['pp_instance_id']
+
+if File.exists? statefile
+  log.fatal "Failing CSR sign due to this instance ID #{csr_extensions['pp_instance_id']} already having been signed."
+  log.fatal "Lock file at: #{statefile}"
+  exit 1
+else
+  FileUtils.touch(statefile)
 end
 
 

@@ -42,6 +42,8 @@ The autosigner validates the legitimacy of a request by checking:
 
 * The instance ID exists, AND
 
+* We have not signed this instance ID before (tracked on Puppet master), AND
+
 * The instance `Name` tag matches the requested cert name, AND
 
 * Administrator-selected trusted facts baked into the cert match tags on the
@@ -187,6 +189,7 @@ details around any failures
 You can test the script directly with the following command:
 
     export LOGSTDOUT=true
+    export STATETRACKING=/tmp
     cat testcsr.pem | ruby autosign-puppet-aws.rb staging-teststack-a4a8ab5c
 
 
