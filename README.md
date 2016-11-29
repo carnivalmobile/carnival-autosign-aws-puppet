@@ -177,6 +177,22 @@ You can check if the CSR includes the attributes with:
     openssl req -noout -text -in \
     /etc/puppetlabs/puppet/ssl/certificate_requests/*.pem
 
+## Something went wrong whilst signing
+
+If the signing was refused, check the syslog on the Puppet master(s). Logs are
+tagged `autosign`.
+
+Note that if the code throws an exception, it isn't captured in syslog. If you
+believe there is an uncaught exception, see the 'Testing script directly'
+section below for how to run directly to validate.
+
+## Something went wrong and I can't get an instance to sign
+
+If the signing process fails part way through, it can upset either the Puppet
+master or the client and prevent future signings working for the client. If this
+happens, remove `/etc/puppetlabs/puppet/ssl` directory and contents on the
+client and run `puppet cert clean CERTNAME` on the master.
+
 
 ## Checking Logs
 
