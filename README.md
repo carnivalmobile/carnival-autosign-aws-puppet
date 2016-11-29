@@ -106,6 +106,16 @@ After signing, these values will be available inside Puppet in the form of the
     $trusted['extensions']['pp_role']
     $trusted['extensions']['pp_environment']
 
+These can also be used inside Hiera, for example:
+
+    :hierarchy:
+      - "nodes/%{::trusted.certname}"
+      - "roles/%{::trusted.extensions.pp_role}"
+      - "environments/%{::trusted.extensions.pp_environment}"
+      - users
+      - common
+
+
 
 ## On Puppet Master (server-side)
 
@@ -146,7 +156,7 @@ Note that we use the Puppet labs bundled version of Ruby as it includes the gem
 for Puppet and a consistent version of Ruby across our server fleet. If your
 version of Puppet is installed elsewhere, you may need to amend.
 
-    /opt/puppetlabs/puppet/bin/gem aws-sdk puppet
+    /opt/puppetlabs/puppet/bin/gem install aws-sdk
     cp autosign-puppet-aws.rb /usr/local/bin/autosign-puppet-aws
 
 
@@ -164,6 +174,12 @@ You can check if the CSR includes the attributes with:
 
     openssl req -noout -text -in \
     /etc/puppetlabs/puppet/ssl/certificate_requests/*.pem
+
+
+## Checking Logs
+
+The autosigner output is logged directly to syslog. This will include all the
+details around any failures
 
 
 ## Testing script directly
