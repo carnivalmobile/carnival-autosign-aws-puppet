@@ -123,6 +123,31 @@ if validated == false
 end
 
 
+# Verify that this is the only instance with that name tag. Whilst Puppet won't
+# allow cert name re-use, an attacker could create a new CSR with a different
+# FQDN but same hostname and supply the instance ID of another existing
+# instance. To protect against this, we have two measures - first the launch
+# time restriction, but also this check to ensure the Name isn't being set twice
+# anywhere in AWS EC2.
+
+log.info "[autosign] Verifying instance name tag is unique..."
+
+instance_details_unique = client_ec2.describe_instances({
+  filters:[{ name: "tag:Name", values: [instance_name_cert] }],
+  dry_run: false,
+})
+
+if instance_details_unique.reservations.count > 1
+  log.info "[autosign] Failing signing as more than one server exists with the same name (multiple reservations). Enforce uniqueness."
+  exit 1
+end
+
+if instance_details_unique.reservations[0].instances.count > 1
+  log.info "[autosign] Failing signing as more than one server exists with the same name (multiple instances in one reservation). Enforce uniqueness."
+  exit 1
+end
+
+
 # Iterate through the Puppet extended values (other than instance_id and region)
  csr_extensions.each do |extension, value|
    unless extension == 'pp_instance_id' or extension == 'pp_region'
