@@ -22,7 +22,7 @@
 require 'puppet'
 require 'puppet/ssl/oids'
 require 'puppet/ssl/certificate_request'
-require 'aws-sdk'
+require 'aws-sdk-ec2'
 require 'logger'
 require 'syslog/logger'
 require 'fileutils'
